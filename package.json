@@ -19,7 +19,7 @@
         "react-dom": "19.1.0",
         "react-native": "0.81.5",
         "react-native-web": "^0.21.0",
-        "@agent-charlie/ui-kit": "github:yourusername/ui-kit",
+        "@agent-charlie/ui-kit": "github:CarlosViking394/ui-kit",
         "tamagui": "^1.0.0",
         "@tamagui/config": "^1.0.0",
         "@tamagui/font-inter": "^1.0.0",
