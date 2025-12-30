@@ -1,0 +1,38 @@
+{
+    "name": "overlord-ui",
+    "version": "1.0.0",
+    "description": "Overlord Mobile App - Multi-platform Expo application",
+    "main": "index.tsx",
+    "scripts": {
+        "start": "expo start",
+        "android": "expo start --android",
+        "ios": "expo start --ios",
+        "web": "expo start --web",
+        "build": "tsc",
+        "lint": "eslint ."
+    },
+    "dependencies": {
+        "@expo/metro-config": "~54.0.12",
+        "expo": "~54.0.30",
+        "expo-status-bar": "~3.0.9",
+        "react": "19.1.0",
+        "react-dom": "19.1.0",
+        "react-native": "0.81.5",
+        "react-native-web": "^0.21.0",
+        "@agent-charlie/ui-kit": "github:yourusername/ui-kit",
+        "tamagui": "^1.0.0",
+        "@tamagui/config": "^1.0.0",
+        "@tamagui/font-inter": "^1.0.0",
+        "@tamagui/shorthands": "^1.0.0",
+        "@tamagui/themes": "^1.0.0"
+    },
+    "devDependencies": {
+        "@types/react": "~19.1.0",
+        "typescript": "~5.9.2",
+        "eslint": "^8.0.0"
+    },
+    "private": true,
+    "engines": {
+        "node": ">=20"
+    }
+}
