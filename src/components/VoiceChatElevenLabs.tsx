@@ -16,7 +16,12 @@ import {
 import { useAuth } from '../store/AuthContext';
 
 // Eleven Labs Conversational AI Agent
+// NOTE: This agent ID must be valid and active in your Eleven Labs dashboard
+// Create one at: https://elevenlabs.io/app/conversational-ai
 const ELEVEN_LABS_AGENT_ID = 'agent_7401kds8pqx3fqwrgk46k99wyh7g';
+
+// Debug mode for troubleshooting connection issues
+const DEBUG_MODE = true;
 
 interface Message {
     id: string;
@@ -120,32 +125,28 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
             }
 
             // Start conversation with Eleven Labs agent
+            if (DEBUG_MODE) {
+                console.log('Starting Eleven Labs session with agent:', ELEVEN_LABS_AGENT_ID);
+            }
+
             const conversation = await Conversation.startSession({
                 agentId: ELEVEN_LABS_AGENT_ID,
-                overrides: {
-                    agent: {
-                        prompt: {
-                            prompt: `You are Charlie, a friendly AI assistant for Agent Charlie platform. You help users manage websites, apps, and AI agents. Keep responses concise and natural for voice conversation. The user's name is ${user?.name || 'there'}.`,
-                        },
-                        firstMessage: `Hey ${user?.name?.split(' ')[0] || 'there'}! I'm Charlie, ready to help. What's on your mind?`,
-                    },
-                },
                 onConnect: () => {
-                    console.log('Connected to Eleven Labs');
+                    if (DEBUG_MODE) console.log('[ElevenLabs] Connected successfully');
                     if (!isUnmountingRef.current) {
                         setState('connected');
                         addMessage('system', 'Connected! Speak anytime - you can interrupt me.');
                     }
                 },
                 onDisconnect: () => {
-                    console.log('Disconnected from Eleven Labs');
+                    if (DEBUG_MODE) console.log('[ElevenLabs] Disconnected');
                     if (!isUnmountingRef.current) {
                         setState('idle');
                         conversationRef.current = null;
                     }
                 },
                 onMessage: (message: { source: string; message: string }) => {
-                    console.log('Message:', message);
+                    if (DEBUG_MODE) console.log('[ElevenLabs] Message:', message);
                     if (isUnmountingRef.current) return;
                     if (message.source === 'user') {
                         addMessage('user', message.message);
@@ -155,7 +156,7 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
                     }
                 },
                 onModeChange: (mode: { mode: string }) => {
-                    console.log('Mode:', mode.mode);
+                    if (DEBUG_MODE) console.log('[ElevenLabs] Mode change:', mode.mode);
                     if (isUnmountingRef.current) return;
                     if (mode.mode === 'speaking') {
                         setState('speaking');
@@ -164,9 +165,10 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
                     }
                 },
                 onError: (error: Error) => {
-                    console.error('Eleven Labs error:', error);
+                    console.error('[ElevenLabs] Error:', error);
+                    if (DEBUG_MODE) console.error('[ElevenLabs] Error details:', JSON.stringify(error, null, 2));
                     if (!isUnmountingRef.current) {
-                        setError(error.message);
+                        setError(error.message || 'Connection failed - check agent ID');
                         setState('idle');
                     }
                 },
