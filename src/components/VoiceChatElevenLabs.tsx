@@ -115,8 +115,8 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
                 return;
             }
 
-            // Dynamic import of Eleven Labs SDK
-            const { Conversation } = await import('@11labs/client');
+            // Dynamic import of Eleven Labs SDK (using new @elevenlabs/client package)
+            const { Conversation } = await import('@elevenlabs/client');
 
             // Check again after import
             if (isUnmountingRef.current) {
