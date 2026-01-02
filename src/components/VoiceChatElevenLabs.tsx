@@ -42,6 +42,7 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
     const [state, setState] = useState<ConversationState>('idle');
     const [error, setError] = useState<string | null>(null);
     const [transcript, setTranscript] = useState('');
+    const [aiStreaming, setAiStreaming] = useState(''); // Show AI response as it streams
 
     const scrollViewRef = useRef<ScrollView>(null);
     const conversationRef = useRef<any>(null);
@@ -145,14 +146,32 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
                         conversationRef.current = null;
                     }
                 },
-                onMessage: (message: { source: string; message: string }) => {
-                    if (DEBUG_MODE) console.log('[ElevenLabs] Message:', message);
+                onMessage: (message: any) => {
+                    // Log full message object to see all available properties
+                    if (DEBUG_MODE) console.log('[ElevenLabs] Message (full):', JSON.stringify(message, null, 2));
                     if (isUnmountingRef.current) return;
-                    if (message.source === 'user') {
-                        addMessage('user', message.message);
-                        setTranscript('');
-                    } else if (message.source === 'ai') {
-                        addMessage('charlie', message.message);
+
+                    // Handle different message types
+                    // Messages can be: user transcript, ai response, or system events
+                    const source = message.source || message.type;
+                    const text = message.message || message.text || message.content;
+                    const isFinal = message.isFinal !== false; // Default to true if not specified
+
+                    if (source === 'user') {
+                        if (isFinal && text) {
+                            addMessage('user', text);
+                            setTranscript('');
+                        } else if (!isFinal && text) {
+                            // Show partial user transcript
+                            setTranscript(text);
+                        }
+                    } else if (source === 'ai' || source === 'agent') {
+                        if (text) {
+                            // Show AI response immediately in streaming area
+                            setAiStreaming(text);
+                            // Also add to messages for history
+                            addMessage('charlie', text);
+                        }
                     }
                 },
                 onModeChange: (mode: { mode: string }) => {
@@ -160,8 +179,11 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
                     if (isUnmountingRef.current) return;
                     if (mode.mode === 'speaking') {
                         setState('speaking');
+                        // Keep aiStreaming visible while speaking
                     } else if (mode.mode === 'listening') {
                         setState('listening');
+                        // Clear streaming text when switching to listening
+                        setAiStreaming('');
                     }
                 },
                 onError: (error: Error) => {
@@ -277,6 +299,18 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
                 {transcript ? (
                     <View style={styles.transcriptBubble}>
                         <Text style={styles.transcriptText}>{transcript}{'...'}</Text>
+                    </View>
+                ) : null}
+                {state === 'speaking' && !aiStreaming ? (
+                    <View style={[styles.messageBubble, styles.charlieBubble]}>
+                        <Text style={styles.charlieLabel}>{'Charlie'}</Text>
+                        <Text style={styles.typingIndicator}>{'...'}</Text>
+                    </View>
+                ) : null}
+                {aiStreaming && state === 'speaking' ? (
+                    <View style={[styles.messageBubble, styles.streamingBubble]}>
+                        <Text style={styles.charlieLabel}>{'Charlie'}</Text>
+                        <Text style={styles.charlieText}>{aiStreaming}</Text>
                     </View>
                 ) : null}
             </ScrollView>
@@ -413,6 +447,18 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#7c3aed',
         fontStyle: 'italic',
+    },
+    streamingBubble: {
+        alignSelf: 'flex-start',
+        backgroundColor: '#f0f9ff',
+        borderWidth: 2,
+        borderColor: '#2563eb',
+        borderBottomLeftRadius: 4,
+    },
+    typingIndicator: {
+        fontSize: 24,
+        color: '#9333ea',
+        letterSpacing: 4,
     },
     errorBar: {
         backgroundColor: '#fef2f2',
