@@ -3,14 +3,14 @@ import { View, StyleSheet } from 'react-native';
 import { registerRootComponent } from 'expo';
 import { StatusBar } from 'expo-status-bar';
 import { SimpleLoginScreen } from './src/screens/SimpleLoginScreen';
-import { SimpleDashboardScreen } from './src/screens/SimpleDashboardScreen';
+import { MainDashboard } from './src/screens/MainDashboard';
 import { AuthProvider, useAuth } from './src/store/AuthContext';
 
 function AppContent() {
     const { isAuthenticated } = useAuth();
 
     if (isAuthenticated) {
-        return <SimpleDashboardScreen />;
+        return <MainDashboard />;
     }
 
     return <SimpleLoginScreen />;

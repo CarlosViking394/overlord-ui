@@ -167,10 +167,8 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
                         }
                     } else if (source === 'ai' || source === 'agent') {
                         if (text) {
-                            // Show AI response immediately in streaming area
+                            // Only show in streaming area while speaking - don't add to messages yet
                             setAiStreaming(text);
-                            // Also add to messages for history
-                            addMessage('charlie', text);
                         }
                     }
                 },
@@ -182,8 +180,13 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
                         // Keep aiStreaming visible while speaking
                     } else if (mode.mode === 'listening') {
                         setState('listening');
-                        // Clear streaming text when switching to listening
-                        setAiStreaming('');
+                        // Add the streaming message to history when done speaking
+                        setAiStreaming(prev => {
+                            if (prev) {
+                                addMessage('charlie', prev);
+                            }
+                            return '';
+                        });
                     }
                 },
                 onError: (error: Error) => {

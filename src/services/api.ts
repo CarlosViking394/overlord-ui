@@ -7,11 +7,11 @@ const getApiBase = () => {
     if (typeof window !== 'undefined' && window.location) {
         const hostname = window.location.hostname;
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
-            return 'http://localhost:3000';
+            return 'http://localhost:3001';
         }
-        return `http://${hostname}:3000`;
+        return `http://${hostname}:3001`;
     }
-    return 'http://192.168.1.144:3000';
+    return 'http://192.168.1.144:3001';
 };
 const API_BASE_URL = getApiBase();
 
@@ -101,5 +101,160 @@ export async function getHealth() {
     } catch (error) {
         console.error('Failed to fetch health:', error);
         return null;
+    }
+}
+
+// =============================================================================
+// CHARLIE AI ENDPOINTS
+// =============================================================================
+
+export interface Project {
+    id: string;
+    name: string;
+    description?: string;
+    type: 'website' | 'api' | 'mobile' | 'library' | 'other';
+    status: 'active' | 'archived' | 'deploying' | 'error';
+    framework?: string;
+    lastModified: string;
+    createdAt: string;
+}
+
+export interface FileNode {
+    name: string;
+    path: string;
+    type: 'file' | 'directory';
+    children?: FileNode[];
+}
+
+export interface CharlieMessage {
+    message: string;
+    sessionId?: string;
+    userId?: string;
+    userRole?: 'OVERLORD' | 'ADMIN' | 'LORD';
+    projectId?: string;
+}
+
+export interface CharlieResponse {
+    success: boolean;
+    data?: {
+        message: string;
+        intent?: { type: string; confidence: number };
+        agentUsed?: string;
+        pendingAction?: any;
+        project?: Project;
+    };
+    sessionId?: string;
+    error?: string;
+}
+
+/**
+ * Send a message to Charlie
+ */
+export async function sendMessageToCharlie(request: CharlieMessage): Promise<CharlieResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/charlie/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request),
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to send message to Charlie:', error);
+        return { success: false, error: 'Failed to connect to Charlie' };
+    }
+}
+
+/**
+ * Get all projects
+ */
+export async function getProjects(userId?: string): Promise<Project[]> {
+    try {
+        const url = userId
+            ? `${API_BASE_URL}/charlie/projects?userId=${userId}`
+            : `${API_BASE_URL}/charlie/projects`;
+        const response = await fetch(url);
+        const data = await response.json();
+        return data.data || [];
+    } catch (error) {
+        console.error('Failed to fetch projects:', error);
+        return [];
+    }
+}
+
+/**
+ * Get project details
+ */
+export async function getProject(projectId: string): Promise<Project | null> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/charlie/projects/${projectId}`);
+        const data = await response.json();
+        return data.data || null;
+    } catch (error) {
+        console.error('Failed to fetch project:', error);
+        return null;
+    }
+}
+
+/**
+ * Create a new project
+ */
+export async function createProject(
+    name: string,
+    type: Project['type'],
+    framework?: string,
+    userId?: string
+): Promise<Project | null> {
+    try {
+        const url = userId
+            ? `${API_BASE_URL}/charlie/projects?userId=${userId}`
+            : `${API_BASE_URL}/charlie/projects`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, type, framework }),
+        });
+        const data = await response.json();
+        return data.data || null;
+    } catch (error) {
+        console.error('Failed to create project:', error);
+        return null;
+    }
+}
+
+/**
+ * Get project file tree
+ */
+export async function getProjectFiles(projectId: string): Promise<FileNode[]> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/charlie/projects/${projectId}/files`);
+        const data = await response.json();
+        return data.data || [];
+    } catch (error) {
+        console.error('Failed to fetch project files:', error);
+        return [];
+    }
+}
+
+/**
+ * Approve or reject a pending action
+ */
+export async function approveAction(
+    sessionId: string,
+    actionId: string,
+    approved: boolean
+): Promise<{ success: boolean; message?: string }> {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/charlie/actions/${actionId}/approve?sessionId=${sessionId}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ approved }),
+            }
+        );
+        return await response.json();
+    } catch (error) {
+        console.error('Failed to approve action:', error);
+        return { success: false, message: 'Failed to connect' };
     }
 }
