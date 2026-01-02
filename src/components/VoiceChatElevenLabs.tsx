@@ -40,7 +40,8 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
 
     const scrollViewRef = useRef<ScrollView>(null);
     const conversationRef = useRef<any>(null);
-    const audioContextRef = useRef<AudioContext | null>(null);
+    const isUnmountingRef = useRef(false);
+    const isConnectingRef = useRef(false);
 
     const addMessage = useCallback((type: Message['type'], text: string) => {
         if (!text.trim()) return;
@@ -68,8 +69,17 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
 
     // Cleanup on unmount
     useEffect(() => {
+        isUnmountingRef.current = false;
         return () => {
-            endConversation();
+            isUnmountingRef.current = true;
+            if (conversationRef.current) {
+                try {
+                    conversationRef.current.endSession();
+                } catch (e) {
+                    // Ignore errors during cleanup
+                }
+                conversationRef.current = null;
+            }
         };
     }, []);
 
@@ -79,6 +89,14 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
             return;
         }
 
+        // Prevent multiple simultaneous connection attempts
+        if (isConnectingRef.current || conversationRef.current) {
+            console.log('Already connecting or connected');
+            return;
+        }
+
+        isConnectingRef.current = true;
+
         try {
             setState('connecting');
             setError(null);
@@ -86,8 +104,20 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
             // Request microphone permission
             await navigator.mediaDevices.getUserMedia({ audio: true });
 
+            // Check if unmounted during async operation
+            if (isUnmountingRef.current) {
+                isConnectingRef.current = false;
+                return;
+            }
+
             // Dynamic import of Eleven Labs SDK
             const { Conversation } = await import('@11labs/client');
+
+            // Check again after import
+            if (isUnmountingRef.current) {
+                isConnectingRef.current = false;
+                return;
+            }
 
             // Start conversation with Eleven Labs agent
             const conversation = await Conversation.startSession({
@@ -102,15 +132,21 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
                 },
                 onConnect: () => {
                     console.log('Connected to Eleven Labs');
-                    setState('connected');
-                    addMessage('system', 'Connected! Speak anytime - you can interrupt me.');
+                    if (!isUnmountingRef.current) {
+                        setState('connected');
+                        addMessage('system', 'Connected! Speak anytime - you can interrupt me.');
+                    }
                 },
                 onDisconnect: () => {
                     console.log('Disconnected from Eleven Labs');
-                    setState('idle');
+                    if (!isUnmountingRef.current) {
+                        setState('idle');
+                        conversationRef.current = null;
+                    }
                 },
                 onMessage: (message: { source: string; message: string }) => {
                     console.log('Message:', message);
+                    if (isUnmountingRef.current) return;
                     if (message.source === 'user') {
                         addMessage('user', message.message);
                         setTranscript('');
@@ -120,6 +156,7 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
                 },
                 onModeChange: (mode: { mode: string }) => {
                     console.log('Mode:', mode.mode);
+                    if (isUnmountingRef.current) return;
                     if (mode.mode === 'speaking') {
                         setState('speaking');
                     } else if (mode.mode === 'listening') {
@@ -128,31 +165,50 @@ export function VoiceChatElevenLabs({ onClose }: VoiceChatElevenLabsProps) {
                 },
                 onError: (error: Error) => {
                     console.error('Eleven Labs error:', error);
-                    setError(error.message);
-                    setState('idle');
+                    if (!isUnmountingRef.current) {
+                        setError(error.message);
+                        setState('idle');
+                    }
                 },
             });
 
-            conversationRef.current = conversation;
+            // Store reference only if not unmounted
+            if (!isUnmountingRef.current) {
+                conversationRef.current = conversation;
+            } else {
+                // Cleanup if component unmounted during connection
+                try {
+                    await conversation.endSession();
+                } catch (e) {
+                    // Ignore
+                }
+            }
 
         } catch (err: any) {
             console.error('Failed to start conversation:', err);
-            setError(err.message || 'Failed to connect');
-            setState('idle');
+            if (!isUnmountingRef.current) {
+                setError(err.message || 'Failed to connect');
+                setState('idle');
+            }
+        } finally {
+            isConnectingRef.current = false;
         }
     };
 
     const endConversation = async () => {
-        if (conversationRef.current) {
+        const conversation = conversationRef.current;
+        if (conversation) {
+            conversationRef.current = null;
             try {
-                await conversationRef.current.endSession();
+                await conversation.endSession();
             } catch (e) {
                 // Ignore errors during cleanup
             }
-            conversationRef.current = null;
         }
-        setState('idle');
-        addMessage('system', 'Conversation ended.');
+        if (!isUnmountingRef.current) {
+            setState('idle');
+            addMessage('system', 'Conversation ended.');
+        }
     };
 
     const getStateText = () => {
