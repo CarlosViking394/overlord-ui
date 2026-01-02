@@ -11,9 +11,13 @@ import {
     StyleSheet,
     RefreshControl,
     ActivityIndicator,
+    Modal,
 } from 'react-native';
 import { useAuth } from '../store/AuthContext';
 import { getServices, getHealth } from '../services/api';
+import { VoiceChat } from '../components/VoiceChat';
+import { VoiceChatRealtime } from '../components/VoiceChatRealtime';
+import { VoiceChatElevenLabs } from '../components/VoiceChatElevenLabs';
 
 interface Service {
     id: string;
@@ -50,6 +54,9 @@ export function SimpleDashboardScreen() {
     const [apiHealth, setApiHealth] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [showVoiceChat, setShowVoiceChat] = useState(false);
+    const [showRealtimeChat, setShowRealtimeChat] = useState(false);
+    const [showElevenLabsChat, setShowElevenLabsChat] = useState(false);
 
     const loadData = async () => {
         try {
@@ -187,14 +194,23 @@ export function SimpleDashboardScreen() {
                 {/* Quick Actions */}
                 <Text style={styles.sectionTitle}>Quick Actions</Text>
                 <View style={styles.actionsGrid}>
-                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#2563eb' }]}>
-                        <Text style={styles.actionText}>Voice Command</Text>
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: '#9333ea' }]}
+                        onPress={() => setShowElevenLabsChat(true)}
+                    >
+                        <Text style={styles.actionText}>Talk to Charlie</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#16a34a' }]}>
-                        <Text style={styles.actionText}>Deploy App</Text>
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: '#2563eb' }]}
+                        onPress={() => setShowRealtimeChat(true)}
+                    >
+                        <Text style={styles.actionText}>Voice (Claude)</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#9333ea' }]}>
-                        <Text style={styles.actionText}>Manage Agents</Text>
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: '#16a34a' }]}
+                        onPress={() => setShowVoiceChat(true)}
+                    >
+                        <Text style={styles.actionText}>Text Chat</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#6b7280' }]}>
                         <Text style={styles.actionText}>Settings</Text>
@@ -204,6 +220,36 @@ export function SimpleDashboardScreen() {
                 {/* Footer */}
                 <Text style={styles.footer}>Agent Charlie Control Plane v1.0</Text>
             </View>
+
+            {/* Text Chat Modal */}
+            <Modal
+                visible={showVoiceChat}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setShowVoiceChat(false)}
+            >
+                <VoiceChat onClose={() => setShowVoiceChat(false)} />
+            </Modal>
+
+            {/* Realtime Voice Chat Modal */}
+            <Modal
+                visible={showRealtimeChat}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setShowRealtimeChat(false)}
+            >
+                <VoiceChatRealtime onClose={() => setShowRealtimeChat(false)} />
+            </Modal>
+
+            {/* Eleven Labs Direct Voice Chat Modal */}
+            <Modal
+                visible={showElevenLabsChat}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setShowElevenLabsChat(false)}
+            >
+                <VoiceChatElevenLabs onClose={() => setShowElevenLabsChat(false)} />
+            </Modal>
         </ScrollView>
     );
 }

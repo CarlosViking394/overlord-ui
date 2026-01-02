@@ -2,7 +2,18 @@
  * API Service - Communication with Overlord API
  */
 
-const API_BASE_URL = 'http://localhost:3000';
+// Dynamic API base - works from localhost or mobile devices
+const getApiBase = () => {
+    if (typeof window !== 'undefined' && window.location) {
+        const hostname = window.location.hostname;
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return 'http://localhost:3000';
+        }
+        return `http://${hostname}:3000`;
+    }
+    return 'http://192.168.1.144:3000';
+};
+const API_BASE_URL = getApiBase();
 
 // Development seed users (matching the database)
 const DEV_USERS = [
